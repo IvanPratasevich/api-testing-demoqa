@@ -1,0 +1,96 @@
+#name: Tests
+#
+#on:
+#  schedule:
+#    - cron: '0 9 * * *'
+#
+#  pull_request:
+#    branches: [main, develop]
+#
+#  push:
+#    branches: [main]
+#
+#  workflow_dispatch:
+#    inputs:
+#      workers:
+#        description: 'Number of workers'
+#        required: false
+#        default: '2'
+#      runThis:
+#        description: 'Test keyword to run'
+#        required: false
+#        default: ''
+#      project:
+#        description: 'Specific project to run (leave empty for all)'
+#        required: false
+#        default: ''
+#
+#jobs:
+#  test:
+#    timeout-minutes: 90
+#    runs-on: ubuntu-latest
+#
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        browser: [chromium, firefox]
+#        viewport:
+#          - { width: 1920, height: 1080 }
+#          - { width: 1366, height: 768 }
+#
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v4
+#
+#      - name: Setup Node.js
+#        uses: actions/setup-node@v4
+#        with:
+#          node-version: '20'
+#          cache: 'npm'
+#
+#      - name: Install dependencies
+#        run: npm ci
+#
+#      - name: Install Playwright Browsers
+#        run: npx playwright install --with-deps chromium firefox
+#
+#      - name: Run Playwright tests
+#        env:
+#          VIEWPORT_WIDTH: ${{ matrix.viewport.width }}
+#          VIEWPORT_HEIGHT: ${{ matrix.viewport.height }}
+#          workers: ${{ github.event.inputs.workers || '2' }}
+#          runThis: ${{ github.event.inputs.runThis || '' }}
+#          CI: true
+#        run: |
+#          if [ -n "${{ github.event.inputs.project }}" ]; then
+#            npx playwright test --project=${{ github.event.inputs.project }}
+#          else
+#            npx playwright test --project=${{ matrix.browser }}-${{ matrix.viewport.width }}x${{ matrix.viewport.height }}
+#          fi
+#
+#      - name: Upload Playwright Report
+#        uses: actions/upload-artifact@v4
+#        if: always()
+#        with:
+#          name: playwright-report-${{ matrix.browser }}-${{ matrix.viewport.width }}x${{ matrix.viewport.height }}
+#          path: playwright-report/
+#          retention-days: 30
+#
+#      - name: Upload Test Results
+#        uses: actions/upload-artifact@v4
+#        if: always()
+#        with:
+#          name: test-results-${{ matrix.browser }}-${{ matrix.viewport.width }}x${{ matrix.viewport.height }}
+#          path: |
+#            junit-results.xml
+#            test-results/
+#            test-results.json
+#          retention-days: 30
+#
+#      - name: Upload Screenshots on Failure
+#        uses: actions/upload-artifact@v4
+#        if: failure()
+#        with:
+#          name: screenshots-${{ matrix.browser }}-${{ matrix.viewport.width }}x${{ matrix.viewport.height }}
+#          path: test-results/**/*-failed-*.png
+#          retention-days: 7
